@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão · Funil de Vendas</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:       #07090f;
+  --s1:       #0d1117;
+  --s2:       #111820;
+  --s3:       #162030;
+  --border:   rgba(255,255,255,.07);
+  --border2:  rgba(255,255,255,.12);
+  --text:     #e2e8f4;
+  --muted:    #4a6080;
+  --muted2:   #7a95b0;
+
+  --c1: #3b82f6;   /* conversas  → azul   */
+  --c2: #f59e0b;   /* agendadas  → âmbar  */
+  --c3: #10b981;   /* realizadas → verde  */
+  --c4: #f43f5e;   /* fechamentos→ rosa   */
+
+  --ok:   #10b981;
+  --warn: #f59e0b;
+  --bad:  #f43f5e;
+
+  --font: 'Outfit', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+/* ── NOISE OVERLAY ── */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events:none; z-index:0; opacity:.6;
+}
+
+/* ── HEADER ── */
+header {
+  position: sticky; top:0; z-index:100;
+  background: rgba(7,9,15,.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.brand {
+  display:flex; align-items:center; gap:10px;
+}
+.brand-icon {
+  width:32px; height:32px;
+  background: linear-gradient(135deg,#1d4ed8,#7c3aed);
+  border-radius:8px;
+  display:grid; place-items:center;
+  font-size:15px;
+}
+.brand h1 {
+  font-size:15px; font-weight:700;
+  letter-spacing:-.3px;
+}
+.brand h1 span { color:#3b82f6; }
+.tag {
+  background: rgba(59,130,246,.12);
+  color: #3b82f6;
+  border: 1px solid rgba(59,130,246,.25);
+  font-size:11px; font-weight:600;
+  padding:3px 9px; border-radius:20px;
+  letter-spacing:.5px; text-transform:uppercase;
+}
+.header-right { display:flex; align-items:center; gap:12px; }
+#last-update { font-size:12px; color:var(--muted); font-family:var(--mono); }
+
+/* ── FILTERS ── */
+.filters {
+  background: var(--s1);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 32px;
+  display: flex; gap:10px; flex-wrap:wrap; align-items:flex-end;
+}
+.fg { display:flex; flex-direction:column; gap:5px; }
+.fg label { font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; }
+.fg select, .fg input[type=date] {
+  background: var(--s2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  padding: 7px 12px;
+  border-radius:8px;
+  font-family: var(--font);
+  font-size:13px;
+  outline:none;
+  min-width:150px;
+  transition: border-color .2s;
+}
+.fg select:focus, .fg input:focus { border-color: var(--c1); }
+.btn {
+  padding: 8px 18px; border-radius:8px; border:none;
+  font-family:var(--font); font-size:13px; font-weight:600;
+  cursor:pointer; transition:all .15s;
+}
+.btn-p { background:var(--c1); color:#fff; }
+.btn-p:hover { background:#2563eb; }
+.btn-g { background:var(--s2); border:1px solid var(--border2); color:var(--muted2); }
+.btn-g:hover { color:var(--text); border-color:var(--c1); }
+
+/* ── MAIN ── */
+main { padding:28px 32px; max-width:1600px; margin:0 auto; position:relative; z-index:1; }
+
+/* ── SECTION TITLE ── */
+.section-title {
+  font-size:11px; font-weight:700;
+  color:var(--muted);
+  text-transform:uppercase; letter-spacing:1.2px;
+  margin-bottom:14px;
+  display:flex; align-items:center; gap:8px;
+}
+.section-title::after {
+  content:''; flex:1; height:1px; background:var(--border);
+}
+
+/* ── TEAM SUMMARY ── */
+.summary-grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
+  gap:12px;
+  margin-bottom:32px;
+}
+.sum-card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius:12px;
+  padding:18px;
+  position:relative;
+  overflow:hidden;
+}
+.sum-card::after {
+  content:'';
+  position:absolute; bottom:0; left:0; right:0; height:2px;
+}
+.sum-card:nth-child(1)::after { background:var(--c1); }
+.sum-card:nth-child(2)::after { background:var(--c2); }
+.sum-card:nth-child(3)::after { background:var(--c3); }
+.sum-card:nth-child(4)::after { background:var(--c4); }
+.sum-card:nth-child(5)::after { background:#a78bfa; }
+.sum-card:nth-child(6)::after { background:#22d3ee; }
+.sum-label { font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin-bottom:8px; }
+.sum-val { font-size:28px; font-weight:800; line-height:1; font-family:var(--mono); }
+.sum-card:nth-child(1) .sum-val { color:var(--c1); }
+.sum-card:nth-child(2) .sum-val { color:var(--c2); }
+.sum-card:nth-child(3) .sum-val { color:var(--c3); }
+.sum-card:nth-child(4) .sum-val { color:var(--c4); }
+.sum-card:nth-child(5) .sum-val { color:#a78bfa; }
+.sum-card:nth-child(6) .sum-val { color:#22d3ee; }
+.sum-sub { font-size:11px; color:var(--muted); margin-top:5px; }
+
+/* ── FUNIL TEAM ── */
+.funnel-row {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  margin-bottom:32px;
+}
+.card {
+  background:var(--s1);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:22px;
+}
+.card-title {
+  font-size:13px; font-weight:700;
+  margin-bottom:20px;
+  color:var(--text);
+  letter-spacing:-.2px;
+}
+
+/* ── FUNNEL BARS ── */
+.funnel-stage { margin-bottom:16px; }
+.funnel-top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; }
+.funnel-name { font-size:12px; color:var(--muted2); font-weight:500; }
+.funnel-nums { font-family:var(--mono); font-size:12px; }
+.funnel-bar-bg { height:28px; background:var(--s2); border-radius:6px; overflow:hidden; position:relative; }
+.funnel-bar-fill {
+  height:100%;
+  border-radius:6px;
+  display:flex; align-items:center; padding-left:10px;
+  font-size:11px; font-weight:700; color:#fff;
+  transition: width 1s cubic-bezier(.16,1,.3,1);
+  white-space:nowrap;
+}
+.funnel-arrow {
+  text-align:center; font-size:11px; color:var(--muted);
+  margin: -6px 0 4px;
+  display:flex; align-items:center; justify-content:center; gap:6px;
+}
+.conv-rate {
+  font-family:var(--mono);
+  font-size:13px; font-weight:600;
+  padding:2px 8px;
+  border-radius:5px;
+}
+.conv-rate.ok   { background:rgba(16,185,129,.12); color:var(--ok); }
+.conv-rate.warn { background:rgba(245,158,11,.12); color:var(--warn); }
+.conv-rate.bad  { background:rgba(244,63,94,.12); color:var(--bad); }
+
+/* ── HEATMAP TABLE ── */
+.heatmap-wrap { overflow-x:auto; margin-bottom:32px; }
+table.heatmap { width:100%; border-collapse:collapse; }
+table.heatmap th {
+  text-align:left;
+  padding:10px 14px;
+  font-size:10px; font-weight:700; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.8px;
+  border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+table.heatmap th.center { text-align:center; }
+table.heatmap td { padding:10px 14px; border-bottom:1px solid rgba(255,255,255,.03); vertical-align:middle; }
+table.heatmap tr:hover td { background:rgba(59,130,246,.04); }
+.consultor-cell { display:flex; align-items:center; gap:10px; }
+.avatar {
+  width:28px; height:28px; border-radius:8px;
+  display:grid; place-items:center;
+  font-size:11px; font-weight:700; color:#fff;
+  flex-shrink:0;
+}
+.cname { font-weight:600; font-size:13px; }
+.metric-cell { text-align:center; }
+.heat-badge {
+  display:inline-block;
+  font-family:var(--mono);
+  font-size:12px; font-weight:600;
+  padding:4px 10px;
+  border-radius:6px;
+  min-width:52px;
+  text-align:center;
+}
+.score-bar-wrap { display:flex; align-items:center; gap:8px; }
+.score-bar-bg { flex:1; height:6px; background:var(--s2); border-radius:99px; overflow:hidden; }
+.score-bar-fill { height:100%; border-radius:99px; transition:width .8s cubic-bezier(.16,1,.3,1); }
+.score-num { font-family:var(--mono); font-size:12px; font-weight:700; min-width:32px; text-align:right; }
+
+/* ── INDIVIDUAL CARDS ── */
+.consultores-grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px,1fr));
+  gap:16px;
+  margin-bottom:32px;
+}
+.cons-card {
+  background:var(--s1);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:20px;
+  transition: border-color .2s, transform .2s;
+}
+.cons-card:hover { border-color:rgba(59,130,246,.3); transform:translateY(-2px); }
+.cons-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.cons-identity { display:flex; align-items:center; gap:10px; }
+.cons-name { font-size:14px; font-weight:700; }
+.cons-score-badge {
+  font-family:var(--mono);
+  font-size:13px; font-weight:700;
+  padding:4px 10px; border-radius:8px;
+}
+
+/* Mini funil visual dentro do card */
+.mini-funnel { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
+.mf-row { display:flex; align-items:center; gap:8px; }
+.mf-label { font-size:11px; color:var(--muted2); width:90px; flex-shrink:0; }
+.mf-bar-bg { flex:1; height:16px; background:var(--s2); border-radius:4px; overflow:hidden; position:relative; }
+.mf-bar-fill { height:100%; border-radius:4px; display:flex; align-items:center; padding-left:6px; font-size:10px; font-weight:700; color:rgba(255,255,255,.9); }
+.mf-num { font-family:var(--mono); font-size:11px; font-weight:600; width:28px; text-align:right; flex-shrink:0; }
+
+/* Métricas linha */
+.cons-metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.cm { text-align:center; padding:8px 4px; background:var(--s2); border-radius:8px; }
+.cm-val { font-family:var(--mono); font-size:13px; font-weight:700; }
+.cm-lbl { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
+
+/* ── ALERTAS ── */
+.alerts-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; margin-bottom:32px; }
+.alert-card {
+  background:var(--s1);
+  border-radius:12px;
+  padding:16px;
+  display:flex; gap:12px; align-items:flex-start;
+  border-left:3px solid transparent;
+}
+.alert-card.bad   { border-left-color:var(--bad);  background:rgba(244,63,94,.05); }
+.alert-card.warn  { border-left-color:var(--warn); background:rgba(245,158,11,.05); }
+.alert-card.ok    { border-left-color:var(--ok);   background:rgba(16,185,129,.05); }
+.alert-icon { font-size:20px; flex-shrink:0; }
+.alert-text h4 { font-size:13px; font-weight:700; margin-bottom:3px; }
+.alert-text p  { font-size:12px; color:var(--muted2); line-height:1.5; }
+
+/* ── TREND CHART AREA ── */
+.trend-area { margin-bottom:32px; }
+
+/* ── LOADING ── */
+#loading {
+  position:fixed; inset:0;
+  background:var(--bg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
+  z-index:999;
+}
+.spinner {
+  width:40px; height:40px;
+  border:3px solid var(--border); border-top-color:var(--c1);
+  border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+@keyframes spin { to{ transform:rotate(360deg); } }
+#loading p { font-size:13px; color:var(--muted); }
+
+/* ── RESPONSIVE ── */
+@media(max-width:860px){
+  .funnel-row { grid-template-columns:1fr; }
+  main, .filters, header { padding-left:16px; padding-right:16px; }
+}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <p>Carregando dados de gestão…</p>
+</div>
+
+<header>
+  <div class="brand">
+    <div class="brand-icon">📋</div>
+    <h1>Sales<span>Gestão</span></h1>
+    <span class="tag">Funil</span>
+  </div>
+  <div class="header-right">
+    <span id="last-update">—</span>
+    <button class="btn btn-g" onclick="loadData()">↻</button>
+  </div>
+</header>
+
+<div class="filters">
+  <div class="fg">
+    <label>Período</label>
+    <select id="f-period" onchange="onPeriodChange()">
+      <option value="all" selected>Todo o período</option>
+      <option value="7">Últimos 7 dias</option>
+      <option value="14">Últimos 14 dias</option>
+      <option value="30">Últimos 30 dias</option>
+      <option value="custom">Personalizado</option>
+    </select>
+  </div>
+  <div class="fg" id="fg-start" style="display:none">
+    <label>Início</label>
+    <input type="date" id="f-start">
+  </div>
+  <div class="fg" id="fg-end" style="display:none">
+    <label>Fim</label>
+    <input type="date" id="f-end">
+  </div>
+  <div class="fg" style="justify-content:flex-end">
+    <button class="btn btn-p" onclick="applyFilters()">Aplicar</button>
+  </div>
+</div>
+
+<main>
+
+  <!-- RESUMO DO TIME -->
+  <div class="section-title">Resumo do Time</div>
+  <div class="summary-grid">
+    <div class="sum-card"><div class="sum-label">Conversas</div><div class="sum-val" id="s-conv">—</div><div class="sum-sub">total do período</div></div>
+    <div class="sum-card"><div class="sum-label">Agendadas</div><div class="sum-val" id="s-ag">—</div><div class="sum-sub" id="s-ag-r">—</div></div>
+    <div class="sum-card"><div class="sum-label">Realizadas</div><div class="sum-val" id="s-re">—</div><div class="sum-sub" id="s-re-r">—</div></div>
+    <div class="sum-card"><div class="sum-label">Fechamentos</div><div class="sum-val" id="s-fe">—</div><div class="sum-sub" id="s-fe-r">—</div></div>
+    <div class="sum-card"><div class="sum-label">Valor Total</div><div class="sum-val" id="s-val">—</div><div class="sum-sub" id="s-ticket">—</div></div>
+    <div class="sum-card"><div class="sum-label">Score Médio Time</div><div class="sum-val" id="s-score">—</div><div class="sum-sub">0–100</div></div>
+  </div>
+
+  <!-- FUNIL VISUAL + CHART -->
+  <div class="section-title">Funil do Time × Tendência Diária</div>
+  <div class="funnel-row">
+    <div class="card">
+      <div class="card-title">Funil Consolidado</div>
+      <div id="funil-team"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Tendência de Fechamentos Diários</div>
+      <div style="position:relative;height:240px">
+        <canvas id="chart-trend"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- HEATMAP -->
+  <div class="section-title">Heatmap de Performance — Todos os Consultores</div>
+  <div class="card heatmap-wrap" style="margin-bottom:32px">
+    <table class="heatmap">
+      <thead>
+        <tr>
+          <th>Consultor</th>
+          <th class="center">Conversas</th>
+          <th class="center">Conv→Ag</th>
+          <th class="center">Ag→Real</th>
+          <th class="center">Real→Fech</th>
+          <th class="center">Ticket Médio</th>
+          <th class="center">Valor Total</th>
+          <th style="min-width:140px">Score Geral</th>
+        </tr>
+      </thead>
+      <tbody id="heatmap-body"></tbody>
+    </table>
+  </div>
+
+  <!-- ALERTAS -->
+  <div class="section-title">Alertas de Gestão</div>
+  <div class="alerts-grid" id="alerts-grid"></div>
+
+  <!-- CARDS INDIVIDUAIS -->
+  <div class="section-title">Funil Individual por Consultor</div>
+  <div class="consultores-grid" id="consultores-grid"></div>
+
+</main>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────
+const SHEET_ID = '1NzAe0Y5T31e1T13nI9XSaH2VEvjbBXUe6bBXFujDdpk';
+const GID      = '55668390';
+
+let rawData = [];
+let chartTrend = null;
+
+const AVATAR_COLORS = ['#3b82f6','#8b5cf6','#ec4899','#f59e0b','#10b981','#06b6d4','#f43f5e','#a3e635'];
+
+// ── HELPERS ─────────────────────────────────────────────
+function parseName(email) {
+  const local = email.split('@')[0].replace(/[0-9]/g,'').replace(/[._-]/g,' ');
+  return local.split(' ').filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || email;
+}
+function initials(name) {
+  return name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
+function fmtBRL(n) {
+  if(n>=1e6) return 'R$'+(n/1e6).toFixed(1)+'M';
+  if(n>=1e3) return 'R$'+(n/1e3).toFixed(1)+'K';
+  return n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+}
+function pct(a,b){ return b>0 ? (a/b*100).toFixed(1)+'%' : '—'; }
+function pctNum(a,b){ return b>0 ? a/b*100 : 0; }
+function parseDate(str){
+  const [d,m,y] = str.trim().split('/');
+  return new Date(+y,+m-1,+d);
+}
+function heatColor(val, thresholds) {
+  // thresholds: [bad, warn, ok] percentages
+  if(val === null || isNaN(val)) return {cls:'', bg:'rgba(255,255,255,.04)', color:'#4a6080'};
+  if(val >= thresholds[2]) return {cls:'ok',  bg:'rgba(16,185,129,.12)', color:'#10b981'};
+  if(val >= thresholds[1]) return {cls:'warn',bg:'rgba(245,158,11,.12)',  color:'#f59e0b'};
+  return                          {cls:'bad', bg:'rgba(244,63,94,.12)',   color:'#f43f5e'};
+}
+// Score 0-100: média ponderada das taxas de conversão
+function calcScore(c) {
+  const r1 = pctNum(c.agend,  c.conv)   * .25;  // conv→ag
+  const r2 = pctNum(c.realiz, c.agend)  * .20;  // ag→real
+  const r3 = pctNum(c.fech,   c.realiz) * .35;  // real→fech (mais peso)
+  const r4 = c.fech > 0 ? Math.min(c.valor/c.fech/5000,10)*10 * .20 : 0; // ticket
+  return Math.min(100, r1+r2+r3+r4);
+}
+
+// ── LOAD ────────────────────────────────────────────────
+function loadData() {
+  document.getElementById('loading').style.display = 'flex';
+  const old = document.getElementById('gviz-script');
+  if(old) old.remove();
+
+  window.handleGviz = function(resp) {
+    try {
+      rawData = resp.table.rows.map(row => {
+        const c = row.c;
+        // Pega valor ou string formatada
+        const gv = i => (c[i]&&c[i].v!=null) ? c[i].v : '';
+        const gf = i => (c[i]&&c[i].f!=null) ? c[i].f : '';  // formatted value
+
+        const email = String(gv(1)).trim().toLowerCase();
+
+        // Tenta todas as formas possíveis de data do gviz
+        let date = null;
+        const tryDate = str => {
+          if(!str) return null;
+          str = String(str).trim();
+          // "Date(2026,2,22)" — gviz internal (mês é 0-indexed)
+          const dm = str.match(/Date\((\d+),(\d+),(\d+)\)/);
+          if(dm) return new Date(+dm[1], +dm[2], +dm[3]);
+          // "22/03/2026" — BR format
+          const br = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+          if(br) return new Date(+br[3], +br[2]-1, +br[1]);
+          // "2026-03-22" — ISO
+          const iso = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if(iso) return new Date(+iso[1], +iso[2]-1, +iso[3]);
+          return null;
+        };
+
+        // Tenta col 2 valor → col 2 formatado → col 0 (timestamp) como fallback
+        date = tryDate(gv(2)) || tryDate(gf(2)) || tryDate(gf(0)) || tryDate(gv(0));
+
+        return {
+          email, name: parseName(email||'consultor'),
+          date: date || new Date('invalid'),
+          conv:  parseFloat(gv(3))||0,
+          agend: parseFloat(gv(4))||0,
+          realiz:parseFloat(gv(5))||0,
+          fech:  parseFloat(gv(6))||0,
+          valor: parseFloat(gv(7))||0,
+        };
+      }).filter(r => r.email && r.date && !isNaN(r.date));
+
+      applyFilters();
+      document.getElementById('last-update').textContent =
+        new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    } catch(e) { alert('Erro ao processar: '+e); }
+    document.getElementById('loading').style.display='none';
+  };
+
+  const s = document.createElement('script');
+  s.id  = 'gviz-script';
+  s.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:handleGviz&gid=${GID}`;
+  s.onerror = () => {
+    document.getElementById('loading').style.display='none';
+    alert('Não foi possível carregar os dados.\nVerifique se a planilha está pública.');
+  };
+  document.head.appendChild(s);
+}
+
+// ── PERIOD ──────────────────────────────────────────────
+function onPeriodChange() {
+  const v = document.getElementById('f-period').value;
+  const custom = v === 'custom';
+  document.getElementById('fg-start').style.display = custom ? '' : 'none';
+  document.getElementById('fg-end').style.display   = custom ? '' : 'none';
+  if (!custom && rawData.length) applyFilters();
+}
+
+function getDateRange() {
+  const p = document.getElementById('f-period').value;
+  const today = new Date(); today.setHours(23,59,59,999);
+  if(p === 'all') return [null, null];
+  if(p === 'custom') {
+    const sv = document.getElementById('f-start').value;
+    const ev = document.getElementById('f-end').value;
+    return [sv ? new Date(sv+'T00:00:00') : null, ev ? new Date(ev+'T23:59:59') : null];
+  }
+  const days = parseInt(p);
+  const start = new Date(); start.setDate(start.getDate() - days); start.setHours(0,0,0,0);
+  return [start, today];
+}
+
+function applyFilters() {
+  const [start, end] = getDateRange();
+  let data = rawData;
+  if(start) data = data.filter(r => r.date >= start);
+  if(end)   data = data.filter(r => r.date <= end);
+
+  renderSummary(data);
+  renderFunilTeam(data);
+  renderTrend(data);
+  renderHeatmap(data);
+  renderAlertas(data);
+  renderCards(data);
+}
+
+// ── AGGREGATE BY CONSULTANT ─────────────────────────────
+function aggregate(data) {
+  const map = {};
+  data.forEach(r => {
+    if(!map[r.email]) map[r.email] = {email:r.email, name:r.name, conv:0,agend:0,realiz:0,fech:0,valor:0,dias:0};
+    const c = map[r.email];
+    c.conv+=r.conv; c.agend+=r.agend; c.realiz+=r.realiz; c.fech+=r.fech; c.valor+=r.valor; c.dias++;
+  });
+  return Object.values(map).sort((a,b)=>b.valor-a.valor);
+}
+
+// ── SUMMARY ─────────────────────────────────────────────
+function renderSummary(data) {
+  const sum = k => data.reduce((a,r)=>a+r[k],0);
+  const conv=sum('conv'), ag=sum('agend'), re=sum('realiz'), fe=sum('fech'), val=sum('valor');
+  const cons = aggregate(data);
+  const avgScore = cons.length ? (cons.reduce((a,c)=>a+calcScore(c),0)/cons.length).toFixed(0) : 0;
+  document.getElementById('s-conv').textContent = conv;
+  document.getElementById('s-ag').textContent   = ag;
+  document.getElementById('s-ag-r').textContent = pct(ag,conv) + ' das conversas';
+  document.getElementById('s-re').textContent   = re;
+  document.getElementById('s-re-r').textContent = pct(re,ag) + ' dos agendados';
+  document.getElementById('s-fe').textContent   = fe;
+  document.getElementById('s-fe-r').textContent = pct(fe,re) + ' das visitas';
+  document.getElementById('s-val').textContent  = fmtBRL(val);
+  document.getElementById('s-ticket').textContent = 'ticket ' + fmtBRL(fe>0?val/fe:0);
+  document.getElementById('s-score').textContent  = avgScore;
+}
+
+// ── FUNIL TEAM ───────────────────────────────────────────
+function renderFunilTeam(data) {
+  const sum = k => data.reduce((a,r)=>a+r[k],0);
+  const conv=sum('conv'), ag=sum('agend'), re=sum('realiz'), fe=sum('fech');
+  const stages = [
+    {label:'Conversas',    val:conv, color:'var(--c1)', pct:null},
+    {label:'Agendamentos', val:ag,   color:'var(--c2)', pct:pctNum(ag,conv)},
+    {label:'Realizadas',   val:re,   color:'var(--c3)', pct:pctNum(re,ag)},
+    {label:'Fechamentos',  val:fe,   color:'var(--c4)', pct:pctNum(fe,re)},
+  ];
+  const max = conv || 1;
+  let html = '';
+  stages.forEach((s,i) => {
+    const w = (s.val/max*100).toFixed(1);
+    const rateClass = s.pct===null ? '' : s.pct>=30?'ok':s.pct>=15?'warn':'bad';
+    if(i>0) html += `<div class="funnel-arrow">↓ <span class="conv-rate ${rateClass}">${s.pct.toFixed(1)}% de conversão</span></div>`;
+    html += `
+      <div class="funnel-stage">
+        <div class="funnel-top">
+          <span class="funnel-name">${s.label}</span>
+          <span class="funnel-nums" style="color:${s.color}">${s.val.toLocaleString('pt-BR')}</span>
+        </div>
+        <div class="funnel-bar-bg">
+          <div class="funnel-bar-fill" style="width:${w}%;background:${s.color}">${s.val>0?s.val:''}</div>
+        </div>
+      </div>`;
+  });
+  document.getElementById('funil-team').innerHTML = html;
+}
+
+// ── TREND CHART ──────────────────────────────────────────
+function renderTrend(data) {
+  const byDate = {};
+  data.forEach(r => {
+    const k = r.date.getTime();
+    if(!byDate[k]) byDate[k] = {date:r.date, fech:0, valor:0};
+    byDate[k].fech  += r.fech;
+    byDate[k].valor += r.valor;
+  });
+  const sorted = Object.values(byDate).sort((a,b)=>a.date-b.date);
+  const labels = sorted.map(d => d.date.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+
+  if(chartTrend) chartTrend.destroy();
+  chartTrend = new Chart(document.getElementById('chart-trend'), {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'Fechamentos', data:sorted.map(d=>d.fech),  backgroundColor:'rgba(244,63,94,.6)',  yAxisID:'y'},
+        {label:'Valor (R$)',  data:sorted.map(d=>d.valor), backgroundColor:'rgba(59,130,246,.3)', type:'line', yAxisID:'y2', tension:.4, fill:true, borderColor:'rgba(59,130,246,.8)', borderWidth:2, pointRadius:3},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#4a6080',font:{size:11},boxWidth:10}}},
+      scales:{
+        x:{ticks:{color:'#4a6080',maxRotation:45,font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},
+        y:{ticks:{color:'#4a6080',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'},title:{display:true,text:'Fechamentos',color:'#4a6080',font:{size:10}}},
+        y2:{position:'right',ticks:{color:'#3b82f6',font:{size:10},callback:v=>fmtBRL(v)},grid:{display:false},title:{display:true,text:'Valor',color:'#3b82f6',font:{size:10}}},
+      }
+    }
+  });
+}
+
+// ── HEATMAP ──────────────────────────────────────────────
+function renderHeatmap(data) {
+  const cons = aggregate(data);
+  const rows = cons.map((c,i) => {
+    const r1 = pctNum(c.agend, c.conv);
+    const r2 = pctNum(c.realiz, c.agend);
+    const r3 = pctNum(c.fech, c.realiz);
+    const ticket = c.fech>0 ? c.valor/c.fech : 0;
+    const score  = calcScore(c);
+
+    const h1 = heatColor(r1, [10,25,40]);
+    const h2 = heatColor(r2, [50,75,90]);
+    const h3 = heatColor(r3, [10,20,35]);
+
+    const scoreColor = score>=60?'var(--ok)':score>=35?'var(--warn)':'var(--bad)';
+    const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
+
+    return `<tr>
+      <td>
+        <div class="consultor-cell">
+          <div class="avatar" style="background:${color}">${initials(c.name)}</div>
+          <div>
+            <div class="cname">${c.name}</div>
+            <div style="font-size:10px;color:var(--muted)">${c.dias} registro${c.dias!==1?'s':''}</div>
+          </div>
+        </div>
+      </td>
+      <td class="metric-cell"><span style="font-family:var(--mono);font-weight:600">${c.conv}</span></td>
+      <td class="metric-cell"><span class="heat-badge" style="background:${h1.bg};color:${h1.color}">${pct(c.agend,c.conv)}</span></td>
+      <td class="metric-cell"><span class="heat-badge" style="background:${h2.bg};color:${h2.color}">${pct(c.realiz,c.agend)}</span></td>
+      <td class="metric-cell"><span class="heat-badge" style="background:${h3.bg};color:${h3.color}">${pct(c.fech,c.realiz)}</span></td>
+      <td class="metric-cell"><span style="font-family:var(--mono);font-size:12px;font-weight:600;color:var(--muted2)">${fmtBRL(ticket)}</span></td>
+      <td class="metric-cell"><span style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--ok)">${fmtBRL(c.valor)}</span></td>
+      <td>
+        <div class="score-bar-wrap">
+          <div class="score-bar-bg">
+            <div class="score-bar-fill" style="width:${score.toFixed(0)}%;background:${scoreColor}"></div>
+          </div>
+          <div class="score-num" style="color:${scoreColor}">${score.toFixed(0)}</div>
+        </div>
+      </td>
+    </tr>`;
+  });
+  document.getElementById('heatmap-body').innerHTML = rows.join('') || '<tr><td colspan="8" style="color:var(--muted);padding:20px;text-align:center">Sem dados</td></tr>';
+}
+
+// ── ALERTAS ──────────────────────────────────────────────
+function renderAlertas(data) {
+  const cons = aggregate(data);
+  const alerts = [];
+
+  cons.forEach(c => {
+    const r1 = pctNum(c.agend, c.conv);
+    const r2 = pctNum(c.realiz, c.agend);
+    const r3 = pctNum(c.fech, c.realiz);
+
+    if(c.conv >= 10 && r1 < 10)
+      alerts.push({type:'bad', icon:'⚠️', title:`${c.name} — Baixa taxa de agendamento`, text:`${pct(c.agend,c.conv)} das conversas viram agendamentos. Revisar abordagem inicial.`});
+    else if(c.conv >= 10 && r1 < 25)
+      alerts.push({type:'warn', icon:'💬', title:`${c.name} — Agendamento abaixo da média`, text:`${pct(c.agend,c.conv)} de conversão. Potencial de melhoria na qualificação do lead.`});
+
+    if(c.agend >= 5 && r2 < 60)
+      alerts.push({type:'bad', icon:'📅', title:`${c.name} — Muitas visitas perdidas`, text:`Apenas ${pct(c.realiz,c.agend)} dos agendamentos são realizados. Verificar processo de confirmação.`});
+
+    if(c.realiz >= 5 && r3 < 10)
+      alerts.push({type:'bad', icon:'🎯', title:`${c.name} — Fechamento muito baixo`, text:`${pct(c.fech,c.realiz)} de conversão em visitas. Considera treinamento de pitch/fechamento.`});
+    else if(c.realiz >= 5 && r3 >= 35)
+      alerts.push({type:'ok', icon:'🏆', title:`${c.name} — Excelente taxa de fechamento!`, text:`${pct(c.fech,c.realiz)} de conversão em visitas. Peça que compartilhe o método com o time.`});
+  });
+
+  if(!alerts.length)
+    alerts.push({type:'ok', icon:'✅', title:'Nenhum alerta no período', text:'Todos os consultores estão dentro de parâmetros aceitáveis no período selecionado.'});
+
+  document.getElementById('alerts-grid').innerHTML = alerts.slice(0,8).map(a => `
+    <div class="alert-card ${a.type}">
+      <div class="alert-icon">${a.icon}</div>
+      <div class="alert-text">
+        <h4>${a.title}</h4>
+        <p>${a.text}</p>
+      </div>
+    </div>`).join('');
+}
+
+// ── CARDS INDIVIDUAIS ────────────────────────────────────
+function renderCards(data) {
+  const cons = aggregate(data);
+  const maxVal = cons[0]?.valor || 1;
+
+  const html = cons.map((c,i) => {
+    const score = calcScore(c);
+    const scoreColor = score>=60?'var(--ok)':score>=35?'var(--warn)':'var(--bad)';
+    const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
+    const max = c.conv || 1;
+
+    const stages = [
+      {label:'Conversas',   val:c.conv,   color:'var(--c1)'},
+      {label:'Agendadas',   val:c.agend,  color:'var(--c2)'},
+      {label:'Realizadas',  val:c.realiz, color:'var(--c3)'},
+      {label:'Fechamentos', val:c.fech,   color:'var(--c4)'},
+    ];
+
+    const funnel = stages.map(s => `
+      <div class="mf-row">
+        <div class="mf-label">${s.label}</div>
+        <div class="mf-bar-bg">
+          <div class="mf-bar-fill" style="width:${(s.val/max*100).toFixed(1)}%;background:${s.color}">${s.val||''}</div>
+        </div>
+        <div class="mf-num" style="color:${s.color}">${s.val}</div>
+      </div>`).join('');
+
+    const r1=pct(c.agend,c.conv), r2=pct(c.realiz,c.agend), r3=pct(c.fech,c.realiz);
+    const ticket = c.fech>0 ? fmtBRL(c.valor/c.fech) : '—';
+
+    return `
+    <div class="cons-card">
+      <div class="cons-header">
+        <div class="cons-identity">
+          <div class="avatar" style="background:${color};width:36px;height:36px;font-size:13px">${initials(c.name)}</div>
+          <div>
+            <div class="cons-name">${c.name}</div>
+            <div style="font-size:11px;color:var(--muted)">${fmtBRL(c.valor)} · ${c.dias} dias</div>
+          </div>
+        </div>
+        <div class="cons-score-badge" style="background:${scoreColor}1a;color:${scoreColor};border:1px solid ${scoreColor}33">
+          ${score.toFixed(0)} pts
+        </div>
+      </div>
+      <div class="mini-funnel">${funnel}</div>
+      <div class="cons-metrics">
+        <div class="cm"><div class="cm-val" style="color:var(--c2)">${r1}</div><div class="cm-lbl">Conv→Ag</div></div>
+        <div class="cm"><div class="cm-val" style="color:var(--c3)">${r2}</div><div class="cm-lbl">Ag→Real</div></div>
+        <div class="cm"><div class="cm-val" style="color:var(--c4)">${r3}</div><div class="cm-lbl">Real→Fech</div></div>
+        <div class="cm"><div class="cm-val" style="color:#a78bfa;font-size:11px">${ticket}</div><div class="cm-lbl">Ticket</div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('consultores-grid').innerHTML = html || '<p style="color:var(--muted)">Sem dados</p>';
+}
+
+// ── INIT ─────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>

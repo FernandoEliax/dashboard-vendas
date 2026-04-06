@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard de Vendas</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<style>
+  :root {
+    --bg: #080c14;
+    --surface: #0f1623;
+    --surface2: #161f30;
+    --border: #1e2d45;
+    --accent: #2e7eff;
+    --accent2: #f0a500;
+    --accent3: #00d68f;
+    --danger: #ff4d6d;
+    --text: #e8edf5;
+    --muted: #5a7290;
+    --card-glow: rgba(46,126,255,0.08);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 18px;
+  }
+  .logo h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .logo span { color: var(--accent); }
+  #last-update {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* ── FILTERS ── */
+  .filters {
+    padding: 16px 32px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .filter-group label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .filter-group select,
+  .filter-group input[type="date"] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+    min-width: 160px;
+    transition: border-color .2s;
+  }
+  .filter-group select:hover,
+  .filter-group input[type="date"]:hover { border-color: var(--accent); }
+
+  .btn-group { display: flex; gap: 8px; align-items: flex-end; }
+  .btn {
+    padding: 9px 20px;
+    border-radius: 8px;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #1a6ae8; }
+  .btn-ghost { background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+
+  /* ── MAIN ── */
+  main { padding: 28px 32px; max-width: 1600px; margin: 0 auto; }
+
+  /* ── KPIS ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 14px 14px 0 0;
+  }
+  .kpi-card:nth-child(1)::before { background: var(--accent); }
+  .kpi-card:nth-child(2)::before { background: var(--accent2); }
+  .kpi-card:nth-child(3)::before { background: var(--accent3); }
+  .kpi-card:nth-child(4)::before { background: var(--danger); }
+  .kpi-card:nth-child(5)::before { background: #a78bfa; }
+  .kpi-card:nth-child(6)::before { background: #22d3ee; }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px var(--card-glow); }
+  .kpi-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 10px;
+  }
+  .kpi-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .kpi-card:nth-child(1) .kpi-value { color: var(--accent); }
+  .kpi-card:nth-child(2) .kpi-value { color: var(--accent2); }
+  .kpi-card:nth-child(3) .kpi-value { color: var(--accent3); }
+  .kpi-card:nth-child(4) .kpi-value { color: var(--danger); }
+  .kpi-card:nth-child(5) .kpi-value { color: #a78bfa; }
+  .kpi-card:nth-child(6) .kpi-value { color: #22d3ee; }
+  .kpi-sub { font-size: 12px; color: var(--muted); }
+
+  /* ── CHARTS ROW ── */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+  }
+  .chart-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: var(--text);
+    letter-spacing: -0.2px;
+  }
+  .chart-wrap { position: relative; width: 100%; }
+
+  /* ── BOTTOM ROW ── */
+  .bottom-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody tr {
+    border-bottom: 1px solid rgba(30,45,69,.5);
+    transition: background .15s;
+  }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td {
+    padding: 11px 14px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .badge-blue { background: rgba(46,126,255,.15); color: var(--accent); }
+  .rank-num {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .rank-1 { color: var(--accent2); }
+  .rank-2 { color: var(--muted); }
+  .rank-3 { color: #cd7f32; }
+
+  /* ── LOADING / ERROR ── */
+  #loading {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 999;
+  }
+  .spinner {
+    width: 44px; height: 44px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading p { color: var(--muted); font-size: 14px; }
+
+  /* ── PROGRESS BARS ── */
+  .progress-row { margin-bottom: 14px; }
+  .progress-label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; }
+  .progress-name { font-weight: 500; }
+  .progress-val { color: var(--accent); font-weight: 600; }
+  .progress-bg {
+    height: 6px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--accent), #22d3ee);
+    transition: width .8s cubic-bezier(.16,1,.3,1);
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .charts-row, .bottom-row { grid-template-columns: 1fr; }
+    main, .filters, header { padding-left: 16px; padding-right: 16px; }
+  }
+
+  /* ── CONVERSÃO TAG ── */
+  .conv-badge {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+  .conv-high { background: rgba(0,214,143,.15); color: var(--accent3); }
+  .conv-mid  { background: rgba(240,165,0,.15);  color: var(--accent2); }
+  .conv-low  { background: rgba(255,77,109,.15);  color: var(--danger); }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <p>Carregando dados da planilha…</p>
+</div>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📊</div>
+    <h1>Sales<span>Dash</span></h1>
+  </div>
+  <span id="last-update">—</span>
+</header>
+
+<div class="filters">
+  <div class="filter-group">
+    <label>Consultor</label>
+    <select id="f-consultor"><option value="">Todos</option></select>
+  </div>
+  <div class="filter-group">
+    <label>Data Início</label>
+    <input type="date" id="f-start">
+  </div>
+  <div class="filter-group">
+    <label>Data Fim</label>
+    <input type="date" id="f-end">
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="applyFilters()">Aplicar</button>
+    <button class="btn btn-ghost" onclick="resetFilters()">Limpar</button>
+  </div>
+  <div class="btn-group" style="margin-left:auto;">
+    <button class="btn btn-ghost" onclick="loadData()">↻ Atualizar</button>
+  </div>
+</div>
+
+<main>
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Conversas / Dia</div>
+      <div class="kpi-value" id="k-conv">—</div>
+      <div class="kpi-sub">total de conversas</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Visitas Agendadas</div>
+      <div class="kpi-value" id="k-agend">—</div>
+      <div class="kpi-sub">total agendado</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Visitas Realizadas</div>
+      <div class="kpi-value" id="k-realiz">—</div>
+      <div class="kpi-sub" id="k-realiz-sub">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Fechamentos</div>
+      <div class="kpi-value" id="k-fech">—</div>
+      <div class="kpi-sub" id="k-fech-sub">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Valor Total</div>
+      <div class="kpi-value" id="k-valor">—</div>
+      <div class="kpi-sub" id="k-ticket">ticket médio —</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Conv. Visita → Venda</div>
+      <div class="kpi-value" id="k-taxa">—</div>
+      <div class="kpi-sub">fechamentos / visitas realizadas</div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title">Desempenho Diário</div>
+      <div class="chart-wrap" style="height:260px">
+        <canvas id="chart-line"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Mix de Atividades</div>
+      <div class="chart-wrap" style="height:260px">
+        <canvas id="chart-donut"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Row -->
+  <div class="bottom-row">
+    <!-- Ranking -->
+    <div class="chart-card">
+      <div class="chart-title">Ranking de Consultores — Valor</div>
+      <div id="ranking"></div>
+    </div>
+    <!-- Table -->
+    <div class="chart-card">
+      <div class="chart-title">Detalhamento por Consultor</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Consultor</th>
+              <th>Conv.</th>
+              <th>Ag.</th>
+              <th>Real.</th>
+              <th>Fech.</th>
+              <th>Valor</th>
+              <th>Conv%</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+// ─── CONFIG ─────────────────────────────────────────────
+const SHEET_ID  = '1NzAe0Y5T31e1T13nI9XSaH2VEvjbBXUe6bBXFujDdpk';
+const GID       = '55668390';
+
+
+// ─── STATE ──────────────────────────────────────────────
+let rawData = [];
+let charts  = {};
+
+// ─── HELPERS ────────────────────────────────────────────
+function parseName(email) {
+  const local = email.split('@')[0].replace(/[0-9]/g,'').replace(/[._-]/g,' ');
+  return local.split(' ').filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+function parseDate(str) {
+  // "22/03/2026" → Date
+  const [d,m,y] = str.trim().split('/');
+  return new Date(y, m-1, d);
+}
+
+function fmtDate(d) {
+  return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+}
+
+function fmtBRL(n) {
+  if (n >= 1e6) return 'R$ ' + (n/1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return 'R$ ' + (n/1e3).toFixed(1) + 'K';
+  return n.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+}
+
+function pct(a,b) { return b > 0 ? ((a/b)*100).toFixed(1)+'%' : '0%'; }
+
+// ─── LOAD via JSONP (sem CORS) ────────────────────────────
+function loadData() {
+  document.getElementById('loading').style.display = 'flex';
+
+  // Remove script anterior se existir
+  const old = document.getElementById('gviz-script');
+  if (old) old.remove();
+
+  // Callback global chamado pelo JSONP
+  window.handleGvizResponse = function(resp) {
+    try {
+      const rows = resp.table.rows;
+
+      const tryDate = str => {
+        if(!str) return null;
+        str = String(str).trim();
+        const dm = str.match(/Date\((\d+),(\d+),(\d+)\)/);
+        if(dm) return new Date(+dm[1], +dm[2], +dm[3]);
+        const br = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if(br) return new Date(+br[3], +br[2]-1, +br[1]);
+        const iso = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if(iso) return new Date(+iso[1], +iso[2]-1, +iso[3]);
+        return null;
+      };
+
+      rawData = rows.map(row => {
+        const c = row.c;
+        const gv = i => (c[i]&&c[i].v!=null) ? c[i].v : '';
+        const gf = i => (c[i]&&c[i].f!=null) ? c[i].f : '';
+        const email = String(gv(1)).trim().toLowerCase();
+        const date = tryDate(gv(2)) || tryDate(gf(2)) || tryDate(gf(0)) || tryDate(gv(0));
+        return {
+          email, name: parseName(email||'consultor'),
+          dateStr: gf(2)||String(gv(2)),
+          date: date || new Date('invalid'),
+          conv:  parseFloat(gv(3))||0,
+          agend: parseFloat(gv(4))||0,
+          realiz:parseFloat(gv(5))||0,
+          fech:  parseFloat(gv(6))||0,
+          valor: parseFloat(gv(7))||0,
+        };
+      }).filter(r => r.email && r.date && !isNaN(r.date));
+
+      populateConsultorSelect();
+      setDefaultDates();
+      applyFilters();
+      document.getElementById('last-update').textContent =
+        'Atualizado: ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+    } catch(e) {
+      alert('Erro ao processar dados.\n\n' + e);
+    }
+    document.getElementById('loading').style.display = 'none';
+  };
+
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:handleGvizResponse&gid=${GID}`;
+  const script = document.createElement('script');
+  script.id  = 'gviz-script';
+  script.src = url;
+  script.onerror = () => {
+    document.getElementById('loading').style.display = 'none';
+    alert('Não foi possível carregar os dados.\n\nVerifique:\n1. A planilha está pública? (Compartilhar → Qualquer pessoa com o link)\n2. Você está conectado à internet?');
+  };
+  document.head.appendChild(script);
+}
+
+function populateConsultorSelect() {
+  const sel = document.getElementById('f-consultor');
+  const names = [...new Set(rawData.map(r => r.email))].sort();
+  sel.innerHTML = '<option value="">Todos</option>';
+  names.forEach(email => {
+    const opt = document.createElement('option');
+    opt.value = email;
+    opt.textContent = parseName(email);
+    sel.appendChild(opt);
+  });
+}
+
+function setDefaultDates() {
+  if (!rawData.length) return;
+  const dates = rawData.map(r => r.date);
+  const min = new Date(Math.min(...dates));
+  const max = new Date(Math.max(...dates));
+  const fmt = d => d.toISOString().split('T')[0];
+  document.getElementById('f-start').value = fmt(min);
+  document.getElementById('f-end').value   = fmt(max);
+}
+
+function resetFilters() {
+  document.getElementById('f-consultor').value = '';
+  setDefaultDates();
+  applyFilters();
+}
+
+function applyFilters() {
+  const consultor = document.getElementById('f-consultor').value;
+  const startVal  = document.getElementById('f-start').value;
+  const endVal    = document.getElementById('f-end').value;
+  const start = startVal ? new Date(startVal+'T00:00:00') : null;
+  const end   = endVal   ? new Date(endVal+'T23:59:59')   : null;
+
+  let data = rawData;
+  if (consultor) data = data.filter(r => r.email === consultor);
+  if (start)     data = data.filter(r => r.date >= start);
+  if (end)       data = data.filter(r => r.date <= end);
+
+  renderKPIs(data);
+  renderLineChart(data);
+  renderDonut(data);
+  renderRanking(data);
+  renderTable(data);
+}
+
+// ─── KPIs ────────────────────────────────────────────────
+function renderKPIs(data) {
+  const sum = k => data.reduce((a,r) => a + r[k], 0);
+  const conv   = sum('conv');
+  const agend  = sum('agend');
+  const realiz = sum('realiz');
+  const fech   = sum('fech');
+  const valor  = sum('valor');
+  const taxa   = realiz > 0 ? ((fech/realiz)*100).toFixed(1) : 0;
+  const ticket = fech   > 0 ? valor/fech : 0;
+
+  document.getElementById('k-conv').textContent   = conv.toLocaleString('pt-BR');
+  document.getElementById('k-agend').textContent  = agend.toLocaleString('pt-BR');
+  document.getElementById('k-realiz').textContent = realiz.toLocaleString('pt-BR');
+  document.getElementById('k-realiz-sub').textContent = pct(realiz, agend) + ' das agendadas';
+  document.getElementById('k-fech').textContent   = fech.toLocaleString('pt-BR');
+  document.getElementById('k-fech-sub').textContent   = pct(fech, realiz) + ' das realizadas';
+  document.getElementById('k-valor').textContent  = fmtBRL(valor);
+  document.getElementById('k-ticket').textContent = 'ticket médio ' + fmtBRL(ticket);
+  document.getElementById('k-taxa').textContent   = taxa + '%';
+}
+
+// ─── LINE CHART ──────────────────────────────────────────
+function renderLineChart(data) {
+  // Group by date
+  const byDate = {};
+  data.forEach(r => {
+    const k = fmtDate(r.date) + '_' + r.date.getTime();
+    if (!byDate[k]) byDate[k] = { date: r.date, label: fmtDate(r.date), conv:0, agend:0, realiz:0, fech:0, valor:0 };
+    byDate[k].conv   += r.conv;
+    byDate[k].agend  += r.agend;
+    byDate[k].realiz += r.realiz;
+    byDate[k].fech   += r.fech;
+    byDate[k].valor  += r.valor;
+  });
+
+  const sorted = Object.values(byDate).sort((a,b) => a.date - b.date);
+  const labels = sorted.map(d => d.label);
+
+  const datasets = [
+    { label:'Conversas',  data: sorted.map(d=>d.conv),   borderColor:'#2e7eff', backgroundColor:'rgba(46,126,255,.08)',  tension:.4, fill:true },
+    { label:'Ag.',        data: sorted.map(d=>d.agend),  borderColor:'#f0a500', backgroundColor:'rgba(240,165,0,.05)',   tension:.4, fill:false },
+    { label:'Realizadas', data: sorted.map(d=>d.realiz), borderColor:'#00d68f', backgroundColor:'rgba(0,214,143,.05)',   tension:.4, fill:false },
+    { label:'Fechamentos',data: sorted.map(d=>d.fech),   borderColor:'#ff4d6d', backgroundColor:'rgba(255,77,109,.05)',  tension:.4, fill:false },
+  ];
+
+  if (charts.line) charts.line.destroy();
+  charts.line = new Chart(document.getElementById('chart-line'), {
+    type:'line',
+    data:{ labels, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{ labels:{ color:'#5a7290', font:{size:11}, boxWidth:12 } } },
+      scales:{
+        x:{ ticks:{ color:'#5a7290', maxRotation:45, font:{size:11} }, grid:{ color:'#1e2d45' } },
+        y:{ ticks:{ color:'#5a7290', font:{size:11} }, grid:{ color:'#1e2d45' } }
+      }
+    }
+  });
+}
+
+// ─── DONUT ───────────────────────────────────────────────
+function renderDonut(data) {
+  const sum = k => data.reduce((a,r) => a + r[k], 0);
+  const labels = ['Conversas','Agendadas','Realizadas','Fechamentos'];
+  const values = [sum('conv'), sum('agend'), sum('realiz'), sum('fech')];
+
+  if (charts.donut) charts.donut.destroy();
+  charts.donut = new Chart(document.getElementById('chart-donut'), {
+    type:'doughnut',
+    data:{
+      labels,
+      datasets:[{
+        data: values,
+        backgroundColor:['rgba(46,126,255,.8)','rgba(240,165,0,.8)','rgba(0,214,143,.8)','rgba(255,77,109,.8)'],
+        borderColor: '#0f1623',
+        borderWidth: 3,
+        hoverOffset: 8
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      cutout:'65%',
+      plugins:{ legend:{ position:'bottom', labels:{ color:'#5a7290', font:{size:11}, boxWidth:12, padding:16 } } }
+    }
+  });
+}
+
+// ─── RANKING ─────────────────────────────────────────────
+function renderRanking(data) {
+  const byConsult = {};
+  data.forEach(r => {
+    if (!byConsult[r.email]) byConsult[r.email] = { name:r.name, valor:0 };
+    byConsult[r.email].valor += r.valor;
+  });
+  const sorted = Object.values(byConsult).sort((a,b) => b.valor - a.valor);
+  const max = sorted[0]?.valor || 1;
+
+  const html = sorted.map((c,i) => `
+    <div class="progress-row">
+      <div class="progress-label">
+        <span class="progress-name">${i===0?'🥇 ':i===1?'🥈 ':i===2?'🥉 ':''}${c.name}</span>
+        <span class="progress-val">${fmtBRL(c.valor)}</span>
+      </div>
+      <div class="progress-bg">
+        <div class="progress-fill" style="width:${(c.valor/max*100).toFixed(1)}%"></div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('ranking').innerHTML = html || '<p style="color:var(--muted);font-size:13px">Sem dados</p>';
+}
+
+// ─── TABLE ───────────────────────────────────────────────
+function renderTable(data) {
+  const byConsult = {};
+  data.forEach(r => {
+    if (!byConsult[r.email]) byConsult[r.email] = { name:r.name, conv:0, agend:0, realiz:0, fech:0, valor:0 };
+    const c = byConsult[r.email];
+    c.conv+=r.conv; c.agend+=r.agend; c.realiz+=r.realiz; c.fech+=r.fech; c.valor+=r.valor;
+  });
+
+  const sorted = Object.values(byConsult).sort((a,b) => b.valor - a.valor);
+
+  const rows = sorted.map((c,i) => {
+    const convRate = c.realiz > 0 ? (c.fech/c.realiz*100).toFixed(0) : 0;
+    const cls = convRate >= 30 ? 'conv-high' : convRate >= 15 ? 'conv-mid' : 'conv-low';
+    const rankCls = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'';
+    return `<tr>
+      <td><span class="rank-num ${rankCls}">${i+1}</span></td>
+      <td><strong>${c.name}</strong></td>
+      <td>${c.conv}</td>
+      <td>${c.agend}</td>
+      <td>${c.realiz}</td>
+      <td>${c.fech}</td>
+      <td>${fmtBRL(c.valor)}</td>
+      <td><span class="conv-badge ${cls}">${convRate}%</span></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('table-body').innerHTML = rows || '<tr><td colspan="8" style="color:var(--muted);padding:20px;text-align:center">Sem dados para o filtro selecionado</td></tr>';
+}
+
+// ─── INIT ─────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>
