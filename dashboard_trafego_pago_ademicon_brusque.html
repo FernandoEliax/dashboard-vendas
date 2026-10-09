@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tráfego Ademicon Brusque</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f5f6f8; --card:#ffffff; --ink:#14171f; --muted:#667085; --line:#e4e7ec;
+  --brand:#0b6bcb; --brand-soft:#e6f0fb; --accent:#16a34a; --warn:#d97706;
+  --f1:#0b6bcb; --f2:#2f84d6; --f3:#5a9ee0; --f4:#16a34a; --f5:#4cc07a;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1218; --card:#171b23; --ink:#e8eaf0; --muted:#98a2b3; --line:#262c38;
+    --brand:#4c9be8; --brand-soft:#1a2a3d; --accent:#3fcf77; --warn:#f0a43a;
+    --f1:#4c9be8; --f2:#6aaeee; --f3:#8cc2f3; --f4:#3fcf77; --f5:#7ee0a4;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.45}
+.wrap{max-width:1200px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:16px}
+h1{font-size:22px;margin:0;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13px;margin-top:2px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.filters{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:16px}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+input[type=date],select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;max-width:100%}
+select{min-width:180px}
+.presets{display:flex;gap:4px;flex-wrap:wrap}
+.presets button,.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:7px 10px;cursor:pointer}
+.presets button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn:hover,.presets button:hover{border-color:var(--brand)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.kpi .l{font-size:12px;color:var(--muted);font-weight:500}
+.kpi .v{font-size:24px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.kpi .d{font-size:12px;color:var(--muted);margin-top:2px}
+.kpi.hl{border-color:var(--brand);background:var(--brand-soft)}
+.grid2{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;margin-bottom:16px}
+.grid2>*{min-width:0}
+@media(max-width:860px){.grid2{grid-template-columns:1fr}}
+h2{font-size:15px;margin:0 0 4px;font-weight:600}
+.hint{font-size:12px;color:var(--muted);margin:0 0 14px}
+.funnel{display:flex;flex-direction:column;gap:8px}
+.step{display:grid;grid-template-columns:130px 1fr 70px;gap:10px;align-items:center}
+.step .n{font-size:13px;font-weight:500}
+.bar{height:30px;border-radius:6px;display:flex;align-items:center;padding:0 10px;color:#fff;font-weight:600;font-size:13px;font-variant-numeric:tabular-nums;min-width:fit-content;transition:width .3s}
+.step .r{font-size:12px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.chartbox{position:relative;height:280px}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:600;cursor:pointer;user-select:none}
+th:first-child,td:first-child{text-align:left;white-space:normal;min-width:220px}
+tr:hover td{background:var(--bg)}
+.tabs{display:flex;gap:4px;margin-bottom:12px}
+.tabs button{font:inherit;font-size:13px;border:none;background:none;color:var(--muted);padding:6px 10px;border-radius:6px;cursor:pointer;font-weight:500}
+.tabs button.on{background:var(--brand-soft);color:var(--brand)}
+.status{padding:40px;text-align:center;color:var(--muted)}
+.err{color:#d92d20}
+.foot{font-size:12px;color:var(--muted);margin-top:16px}
+.tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:4px;background:var(--bg);border:1px solid var(--line);color:var(--muted);margin-left:6px}
+@media(max-width:560px){.step{grid-template-columns:96px 1fr 56px}select{min-width:0;width:100%}.f{flex:1 1 140px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Tráfego pago · Ademicon Brusque</h1>
+      <div class="sub" id="sub">Meta Ads · carregando…</div>
+    </div>
+    <button class="btn" id="reload">↻ Atualizar dados</button>
+  </header>
+
+  <div class="card filters">
+    <div class="f"><label>De</label><input type="date" id="dFrom"></div>
+    <div class="f"><label>Até</label><input type="date" id="dTo"></div>
+    <div class="f"><label>Período rápido</label>
+      <div class="presets" id="presets">
+        <button data-d="7">7d</button><button data-d="14">14d</button><button data-d="30">30d</button><button data-d="0" class="on">Tudo</button>
+      </div>
+    </div>
+    <div class="f"><label>Campanha</label><select id="fCamp"><option value="">Todas</option></select></div>
+    <div class="f"><label>Conjunto</label><select id="fSet"><option value="">Todos</option></select></div>
+    <div class="f"><label>Anúncio</label><select id="fAd"><option value="">Todos</option></select></div>
+  </div>
+
+  <div id="app"><div class="card status">Carregando dados…</div></div>
+</div>
+
+<script>
+// ===== CONFIG =====
+const SUPABASE_URL = "https://bupmzfwldkrpnapgzdhf.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1cG16ZndsZGtycG5hcGd6ZGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU5OTg0OTUsImV4cCI6MjA2MTU3NDQ5NX0.zBbM6iTJ867Du3OovQ29_q_34ZjKYMkwcfO9CHqqRKI";
+const TABLE = "trafego_facebook_ademicon_brusque";
+
+// Ações do Meta usadas no funil (vêm de dados_brutos.insight.actions)
+const ACT = {
+  conv: "onsite_conversion.messaging_conversation_started_7d",
+  d2:   "onsite_conversion.messaging_user_depth_2_message_send",
+  lpv:  "landing_page_view",
+  video:"video_view"
+};
+
+// ===== HELPERS =====
+const $ = s => document.querySelector(s);
+const brl = v => v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const int = v => Math.round(v).toLocaleString("pt-BR");
+const pct = v => isFinite(v) ? (v*100).toLocaleString("pt-BR",{maximumFractionDigits:2})+"%" : "–";
+const money = v => isFinite(v) && v>0 ? brl(v) : "–";
+const fmtD = s => s.split("-").reverse().slice(0,2).join("/");
+const num = v => v==null ? 0 : Number(v)||0;
+
+let RAW = [], chart;
+
+async function load(){
+  $("#app").innerHTML = '<div class="card status">Carregando dados…</div>';
+  const sel = "data,campanha_id,campanha_nome,conjunto_id,conjunto_nome,anuncio_id,anuncio_nome,investimento,impressoes,cliques,cliques_link,sincronizado_em,acoes:dados_brutos->insight->actions";
+  let rows = [], from = 0, page = 1000;
+  try{
+    while(true){
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?select=${sel}&nivel=eq.ad&order=data.asc`,{
+        headers:{apikey:SUPABASE_ANON_KEY, Authorization:`Bearer ${SUPABASE_ANON_KEY}`, Range:`${from}-${from+page-1}`}
+      });
+      if(!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`);
+      const chunk = await r.json();
+      rows = rows.concat(chunk);
+      if(chunk.length < page) break;
+      from += page;
+    }
+  }catch(e){
+    const hint = e.message.includes("fetch") ? "<br><small>Sem conexão com o Supabase. Se estiver abrindo dentro de uma pré-visualização, abra o arquivo direto no navegador.</small>" : "";
+    $("#app").innerHTML = `<div class="card status err">Erro ao buscar dados: ${e.message}${hint}</div>`;
+    return;
+  }
+  RAW = rows.map(r=>{
+    const a = {};
+    (r.acoes||[]).forEach(x=>a[x.action_type]=num(x.value));
+    return {
+      data:r.data, campId:r.campanha_id, camp:r.campanha_nome||"(sem nome)",
+      setId:r.conjunto_id, set:r.conjunto_nome||"(sem nome)",
+      adId:r.anuncio_id, ad:r.anuncio_nome||"(sem nome)",
+      inv:num(r.investimento), imp:num(r.impressoes), cl:num(r.cliques), cll:num(r.cliques_link),
+      lpv:a[ACT.lpv]||0, conv:a[ACT.conv]||0, d2:a[ACT.d2]||0, video:a[ACT.video]||0,
+      sync:r.sincronizado_em
+    };
+  });
+  if(!RAW.length){ $("#app").innerHTML='<div class="card status">Nenhum dado encontrado.</div>'; return; }
+  const dates = RAW.map(r=>r.data).sort();
+  $("#dFrom").min = $("#dTo").min = dates[0];
+  $("#dFrom").max = $("#dTo").max = dates.at(-1);
+  if(!$("#dFrom").value){ $("#dFrom").value = dates[0]; $("#dTo").value = dates.at(-1); }
+  const lastSync = RAW.map(r=>r.sync).filter(Boolean).sort().at(-1);
+  $("#sub").textContent = `Meta Ads · dados de ${fmtD(dates[0])} a ${fmtD(dates.at(-1))}` + (lastSync?` · sincronizado ${new Date(lastSync).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"})}`:"");
+  fillSelects();
+  render();
+}
+
+function uniq(rows,id,name){
+  const m = new Map(); rows.forEach(r=>{ if(r[id]) m.set(r[id], r[name]); });
+  return [...m].sort((a,b)=>a[1].localeCompare(b[1]));
+}
+function setOpts(el, items, all){
+  const cur = el.value;
+  el.innerHTML = `<option value="">${all}</option>` + items.map(([id,n])=>`<option value="${id}">${n.replace(/</g,"&lt;")}</option>`).join("");
+  el.value = items.some(([id])=>id===cur) ? cur : "";
+}
+function fillSelects(){
+  setOpts($("#fCamp"), uniq(RAW,"campId","camp"), "Todas");
+  const c = $("#fCamp").value;
+  const r1 = RAW.filter(r=>!c||r.campId===c);
+  setOpts($("#fSet"), uniq(r1,"setId","set"), "Todos");
+  const s = $("#fSet").value;
+  setOpts($("#fAd"), uniq(r1.filter(r=>!s||r.setId===s),"adId","ad"), "Todos");
+}
+
+function filtered(){
+  const f=$("#dFrom").value, t=$("#dTo").value, c=$("#fCamp").value, s=$("#fSet").value, a=$("#fAd").value;
+  return RAW.filter(r=>(!f||r.data>=f)&&(!t||r.data<=t)&&(!c||r.campId===c)&&(!s||r.setId===s)&&(!a||r.adId===a));
+}
+function sum(rows){
+  const o={inv:0,imp:0,cl:0,cll:0,lpv:0,conv:0,d2:0,video:0};
+  rows.forEach(r=>{for(const k in o) o[k]+=r[k];});
+  return o;
+}
+
+function render(){
+  const rows = filtered();
+  const t = sum(rows);
+  const days = new Set(rows.map(r=>r.data)).size || 1;
+
+  const kpis = [
+    {l:"Investimento", v:brl(t.inv), d:`${brl(t.inv/days)} por dia · ${days} dias`},
+    {l:"Conversas iniciadas", v:int(t.conv), d:`${int(t.d2)} responderam (2+ msgs)`, hl:true},
+    {l:"Custo por conversa", v:money(t.inv/t.conv), d:`Custo por resposta ${money(t.inv/t.d2)}`, hl:true},
+    {l:"Impressões", v:int(t.imp), d:`CPM ${money(t.inv/t.imp*1000)}`},
+    {l:"Cliques no link", v:int(t.cll), d:`CPC link ${money(t.inv/t.cll)}`},
+    {l:"CTR (todos cliques)", v:pct(t.cl/t.imp), d:`${int(t.cl)} cliques no total`},
+  ];
+
+  const steps = [
+    {n:"Impressões", v:t.imp, c:"var(--f1)"},
+    {n:"Cliques", v:t.cl, c:"var(--f2)"},
+    {n:"Cliques no link", v:t.cll, c:"var(--f3)"},
+    {n:"Conversas", v:t.conv, c:"var(--f4)"},
+    {n:"Responderam", v:t.d2, c:"var(--f5)"},
+  ];
+  const max = steps[0].v || 1;
+  const funnel = steps.map((s,i)=>{
+    const w = s.v ? Math.max(Math.sqrt(s.v/max)*100, 6) : 0; // escala raiz p/ etapas pequenas aparecerem
+    const rate = i ? (steps[i-1].v ? pct(s.v/steps[i-1].v) : "–") : "";
+    return `<div class="step"><div class="n">${s.n}</div><div><div class="bar" style="width:${w}%;background:${s.c}">${int(s.v)}</div></div><div class="r">${rate}</div></div>`;
+  }).join("");
+
+  $("#app").innerHTML = `
+    <div class="kpis">${kpis.map(k=>`<div class="card kpi${k.hl?" hl":""}"><div class="l">${k.l}</div><div class="v">${k.v}</div><div class="d">${k.d}</div></div>`).join("")}</div>
+    <div class="grid2">
+      <div class="card"><h2>Funil</h2><p class="hint">% à direita = conversão da etapa anterior. Barras em escala raiz pra etapas pequenas ficarem visíveis.</p><div class="funnel">${funnel}</div></div>
+      <div class="card"><h2>Evolução diária</h2><p class="hint">Investimento (barras) e conversas iniciadas (linha)</p><div class="chartbox"><canvas id="ch"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="tabs" id="tabs"><button data-g="camp" class="on">Campanhas</button><button data-g="set">Conjuntos</button><button data-g="ad">Anúncios</button></div>
+      <div class="tablewrap" id="tbl"></div>
+    </div>
+    <p class="foot">Conversas = "conversas por mensagem iniciadas" (janela de 7 dias) e Responderam = pessoas que mandaram 2+ mensagens, ambos como reportados pelo Meta. Campanhas de link direto pro WhatsApp (sem botão de mensagem) não geram conversas rastreadas pelo Meta.</p>`;
+
+  drawChart(rows);
+  drawTable(rows, TAB);
+  document.querySelectorAll("#tabs button").forEach(b=>{
+    b.classList.toggle("on", b.dataset.g===TAB);
+    b.onclick=()=>{ TAB=b.dataset.g; document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x===b)); drawTable(filtered(),TAB); };
+  });
+}
+
+let TAB="camp", SORT={k:"inv",dir:-1};
+function drawTable(rows,g){
+  const key = {camp:["campId","camp"], set:["setId","set"], ad:["adId","ad"]}[g];
+  const m = new Map();
+  rows.forEach(r=>{
+    const id=r[key[0]]; if(!m.has(id)) m.set(id,{name:r[key[1]],rows:[]});
+    m.get(id).rows.push(r);
+  });
+  let list = [...m.values()].map(x=>{const s=sum(x.rows); return {name:x.name, ...s, ctr:s.cl/s.imp, cpc:s.inv/s.cll, cpcv:s.inv/s.conv};});
+  const cols = [
+    ["name","Nome",x=>x.name.replace(/</g,"&lt;")],["inv","Invest.",x=>brl(x.inv)],["imp","Impr.",x=>int(x.imp)],
+    ["ctr","CTR",x=>pct(x.ctr)],["cll","Cliq. link",x=>int(x.cll)],["cpc","CPC link",x=>money(x.cpc)],
+    ["conv","Conversas",x=>int(x.conv)],["d2","Responderam",x=>int(x.d2)],["cpcv","Custo/conv.",x=>money(x.cpcv)]
+  ];
+  const v = x => { const y=x[SORT.k]; return typeof y==="string"?y:(isFinite(y)?y:-1); };
+  list.sort((a,b)=>{const A=v(a),B=v(b); return (A>B?1:A<B?-1:0)*SORT.dir;});
+  const t = sum(rows);
+  $("#tbl").innerHTML = `<table><thead><tr>${cols.map(c=>`<th data-k="${c[0]}">${c[1]}${SORT.k===c[0]?(SORT.dir<0?" ↓":" ↑"):""}</th>`).join("")}</tr></thead>
+    <tbody>${list.map(x=>`<tr>${cols.map(c=>`<td>${c[2](x)}</td>`).join("")}</tr>`).join("")||`<tr><td colspan="9">Sem dados no filtro</td></tr>`}</tbody>
+    <tfoot><tr>${cols.map(c=>`<td><b>${c[0]==="name"?"Total":c[2]({name:"",...t,ctr:t.cl/t.imp,cpc:t.inv/t.cll,cpcv:t.inv/t.conv})}</b></td>`).join("")}</tr></tfoot></table>`;
+  document.querySelectorAll("#tbl th").forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k; SORT = {k, dir: SORT.k===k ? -SORT.dir : (k==="name"?1:-1)}; drawTable(filtered(),TAB);
+  });
+}
+
+function drawChart(rows){
+  const by = new Map();
+  rows.forEach(r=>{ const d=by.get(r.data)||{inv:0,conv:0}; d.inv+=r.inv; d.conv+=r.conv; by.set(r.data,d); });
+  const keys=[...by.keys()].sort();
+  const css = getComputedStyle(document.documentElement);
+  const brand=css.getPropertyValue("--brand").trim(), acc=css.getPropertyValue("--accent").trim(),
+        muted=css.getPropertyValue("--muted").trim(), line=css.getPropertyValue("--line").trim();
+  if(chart) chart.destroy();
+  chart = new Chart($("#ch"),{
+    data:{labels:keys.map(fmtD),datasets:[
+      {type:"bar",label:"Investimento",data:keys.map(k=>+by.get(k).inv.toFixed(2)),backgroundColor:brand+"bb",borderRadius:4,yAxisID:"y"},
+      {type:"line",label:"Conversas",data:keys.map(k=>by.get(k).conv),borderColor:acc,backgroundColor:acc,cubicInterpolationMode:"monotone",pointRadius:3,yAxisID:"y1"}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},
+      plugins:{legend:{labels:{color:muted,boxWidth:12}},tooltip:{callbacks:{label:c=>c.dataset.yAxisID==="y"?` ${brl(c.raw)}`:` ${c.raw} conversas`}}},
+      scales:{x:{ticks:{color:muted},grid:{display:false}},
+        y:{position:"left",ticks:{color:muted,callback:v=>"R$"+v},grid:{color:line}},
+        y1:{position:"right",beginAtZero:true,ticks:{color:muted,precision:0},grid:{display:false}}}}
+  });
+}
+
+// ===== EVENTOS =====
+["#dFrom","#dTo"].forEach(s=>$(s).addEventListener("change",()=>{document.querySelectorAll("#presets button").forEach(b=>b.classList.remove("on"));render();}));
+$("#fCamp").addEventListener("change",()=>{$("#fSet").value="";$("#fAd").value="";fillSelects();render();});
+$("#fSet").addEventListener("change",()=>{$("#fAd").value="";fillSelects();render();});
+$("#fAd").addEventListener("change",render);
+$("#reload").addEventListener("click",load);
+document.querySelectorAll("#presets button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("#presets button").forEach(x=>x.classList.toggle("on",x===b));
+  const max=$("#dTo").max, n=+b.dataset.d;
+  $("#dTo").value=max;
+  if(!n){ $("#dFrom").value=$("#dFrom").min; }
+  else { const d=new Date(max+"T12:00:00"); d.setDate(d.getDate()-n+1); $("#dFrom").value=d.toISOString().slice(0,10); }
+  render();
+});
+load();
+</script>
+</body>
+</html>
